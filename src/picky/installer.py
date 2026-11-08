@@ -1,12 +1,3 @@
-"""Per-pick install orchestration.
-
-One class, ``PickInstaller``, that knows how to:
-  - install a single pick (clone / copy / link from local or remote base)
-  - apply branch / commit pins
-  - hand off to ``RequirementInstaller`` for per-plugin pip deps
-  - update a pick (git pull)
-  - remove a pick (wipe source + site-packages)
-"""
 import os
 import shutil
 import typing as tp
@@ -25,19 +16,8 @@ class PickInstaller:
         self.req = requirements
         self.log = logger or NullLogger()
 
-    # ── install ─────────────────────────────────────────────────────────
     def install(self, pick: dict) -> bool:
-        """Install one pick. Returns True on success, False on failure.
-
-        Failure means: clone failed, OR pip failed to install the
-        plugin's requirements.txt. In the latter case the source may be
-        on disk but its deps are missing — caller should NOT try to
-        load the plugin (it will fail to import).
-
-        Always runs ``req.install()`` (idempotent) on the "already
-        present" branch — so requirements added to a pick's
-        ``requirements.txt`` since the last install are picked up.
-        """
+        """Install one pick. Returns True on success, False on failure."""
         plug = pick['plug']
         base = pick['base']
         name = pick['folder']
@@ -113,7 +93,6 @@ class PickInstaller:
         if commit:
             GitOps.checkout_commit(path, commit)
 
-    # ── update ──────────────────────────────────────────────────────────
     def update(self, name: str) -> bool:
         """``git pull`` for the pick at ``<folder>/<name>``."""
         path = os.path.join(self.folder, name)
@@ -130,7 +109,6 @@ class PickInstaller:
                            plugin=name)
             return False
 
-    # ── remove ──────────────────────────────────────────────────────────
     def remove(self, name: str) -> None:
         """Wipe a pick's source dir AND its per-plugin site-packages."""
         path = os.path.join(self.folder, name)

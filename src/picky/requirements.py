@@ -1,11 +1,3 @@
-"""Per-plugin pip installer with isolated --target dirs.
-
-Each plugin's deps live in ``<base_dir>/<plugin_name>/``. Removing a
-plugin wipes its deps automatically.
-
-Plugin deps are declared in a plain ``requirements.txt`` at the plugin's
-repo root (standard pip format). One spec per line, comments with ``#``.
-"""
 import os
 import sys
 import site
@@ -27,7 +19,6 @@ class RequirementInstaller:
         self.pip_args = list(pip_args or ['install', '-q'])
         os.makedirs(base_dir, exist_ok=True)
 
-    # ── paths ────────────────────────────────────────────────────────────
     def target_for(self, name):
         """Return ``<base_dir>/<name>``, creating it. Use only when you're
         about to put something in it."""
@@ -44,19 +35,13 @@ class RequirementInstaller:
             sys.path.append(path)
             site.addsitedir(path)
 
-    # ── removal ──────────────────────────────────────────────────────────
     def remove(self, name):
         shutil.rmtree(os.path.join(self.base_dir, name), ignore_errors=True)
 
-    # ── requirements discovery ───────────────────────────────────────────
     @staticmethod
     def read_requirements(folder, module):
         """Read ``<folder>/<module>/requirements.txt`` and return a list of
         pip-installable spec strings (one per non-empty, non-comment line).
-
-        Returns ``[]`` if the file doesn't exist. Pip option lines (those
-        starting with ``-``) are skipped — use the ``pip_args`` constructor
-        parameter to set global pip options instead.
         """
         req_file = os.path.join(folder, module, 'requirements.txt')
         if not os.path.exists(req_file):
@@ -131,16 +116,8 @@ class RequirementInstaller:
         name = name.strip().replace('_', '-').lower()
         return name or None
 
-    # ── install ──────────────────────────────────────────────────────────
     def install(self, name, folder, module):
-        """Install ``module``'s requirements.txt into ``name``'s site-packages.
-
-        Returns:
-        - ``[]``  — no requirements.txt, or all deps already present (success).
-        - ``list`` — specs that were installed (success).
-        - ``None`` — pip failed. Caller should treat the plugin as not
-          properly installed and skip loading it.
-        """
+        """Install ``module``'s requirements.txt into ``name``'s site-packages. """
         specs = self.read_requirements(folder, module)
         if not specs:
             return []
@@ -169,7 +146,6 @@ class RequirementInstaller:
             return None
         return to_install
 
-    # ── pip plumbing ─────────────────────────────────────────────────────
     def _build_cmd(self, packages, target):
         cmd = [sys.executable, '-m', 'pip'] + self.pip_args
         cmd += ['--target', target,
@@ -178,14 +154,7 @@ class RequirementInstaller:
         return cmd + packages
 
     def _run(self, cmd, plugin=None):
-        """Run a pip command, streaming its output to ``self.log``.
-
-        Returns the pip exit code (0 = success, non-zero = failure).
-
-        On non-zero exit, the captured pip output is ALSO written to
-        stderr directly — so failures are always debuggable even when
-        the plugged-in logger is silent (e.g. NullLogger).
-        """
+        """Run a pip command, streaming its output to ``self.log``."""
         self.log.info('pip', f'Running: {" ".join(cmd)}', plugin=plugin)
         try:
             proc = subprocess.Popen(

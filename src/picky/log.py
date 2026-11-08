@@ -1,4 +1,3 @@
-"""Logger abstraction. LogLevel + Logger ABC + NullLogger + PrintLogger."""
 import enum
 import sys
 import typing as tp

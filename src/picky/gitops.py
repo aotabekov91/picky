@@ -1,4 +1,3 @@
-"""Git operations for Picky. Thin stateless wrappers around GitPython."""
 import git
 
 
@@ -35,11 +34,7 @@ class GitOps:
 
     @staticmethod
     def checkout_branch(path, branch):
-        """Check out a branch by name. Handles both local branches and
-        remote-tracking branches (auto-creates a local tracking branch
-        in the latter case, like ``git checkout <branch>`` does).
-        Returns True on success, False if branch not found.
-        """
+        """Check out a branch by name."""
         repo = GitOps.open(path)
         if repo is None:
             return False

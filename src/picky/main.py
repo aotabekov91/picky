@@ -1,13 +1,3 @@
-"""Picky — lean plugin manager plug.
-
-Owns the ``picky/`` folder under the app's config dir, declares picks
-in ``Picks`` config, and delegates all heavy lifting:
-
-  - git clone/pull/checkout        → :class:`.gitops.GitOps`
-  - per-pick install orchestration  → :class:`.installer.PickInstaller`
-  - per-plugin pip deps             → :class:`.requirements.RequirementInstaller`
-  - logging                         → :class:`.log.Logger`
-"""
 import os
 import typing as tp
 
@@ -17,8 +7,6 @@ from .gitops import GitOps
 from .installer import PickInstaller
 from .requirements import RequirementInstaller
 from .log import Logger, NullLogger, PrintLogger
-from .logger import QtLogger
-from .widget import PickyWidget
 
 class Picky(Plug):
 
@@ -44,7 +32,6 @@ class Picky(Plug):
         self.installer.log = logger
         self.req.log = logger
 
-    # ── paths ───────────────────────────────────────────────────────────
     def addPicksFolder(self):
         config_folder = self.app.configman.configFolder()
         path = os.path.join(config_folder, 'picky')
@@ -54,20 +41,9 @@ class Picky(Plug):
         config_folder = self.app.configman.configFolder()
         return os.path.join(config_folder, 'site-packages')
 
-    # ── load ────────────────────────────────────────────────────────────
     def loadPicks(self, picks: tp.List[dict] = [],
                   skip: tp.FrozenSet[str] = frozenset()) -> None:
-        """Re-apply branch/commit pins + ensure deps importable + load plugs.
-
-        ``skip`` is a set of plugin folder names to skip (e.g. ones whose
-        install just failed). Safe to call any number of times —
-        Plugman's ``isLoaded`` dedupes.
-
-        Each plugin is loaded independently — if one fails to import
-        (e.g. its deps aren't installed), the failure is logged and the
-        rest still load. The app does NOT crash on a single broken
-        plugin.
-        """
+        """Re-apply branch/commit pins + ensure deps importable + load plugs. """
         picks = picks or self.getPicks()
         modules = []
         for pick in picks:
@@ -102,7 +78,6 @@ class Picky(Plug):
                                plugin=name)
         self.log.info('load', f'loaded {loaded}/{len(modules)} picks')
 
-    # ── delegated getters ───────────────────────────────────────────────
     @deleg('getPickyFolder@(normal){Picky}')
     def getFolder(self):
         return self.folder
@@ -124,7 +99,6 @@ class Picky(Plug):
             plugs.append(pick)
         return plugs
 
-    # ── exec commands ───────────────────────────────────────────────────
     @tag('(exec)')
     def PickyInstall(self):
         # Track which picks failed to install (e.g. pip couldn't install
@@ -161,21 +135,3 @@ class Picky(Plug):
                                       f'{repo}: tearup failed: {e}',
                                       plugin=repo)
             self.installer.remove(repo)
-
-    @tag('(exec)')
-    def PickyShow(self):
-        """Open the Picky manager widget (PyQt6 GUI).
-
-        Creates a QtLogger the first time it's called, swaps it in via
-        setLogger(), and opens the widget as a top-level window.
-        Subsequent calls just re-show the existing window.
-        """
-        # Lazily create the QtLogger + widget on first call.
-        if not getattr(self, '_qt_logger', None):
-            self._qt_logger = QtLogger()
-            self.setLogger(self._qt_logger)
-            self._picky_widget = PickyWidget(self, self._qt_logger, self.app.view)
-
-        self._picky_widget.show()
-        self._picky_widget.raise_()
-        self._picky_widget.activateWindow()
